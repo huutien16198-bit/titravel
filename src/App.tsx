@@ -575,6 +575,7 @@ function ContentGenerator({ sites, addLog, googleApiKey, googleCx }: { sites: WP
       });
 
       const data = safeJsonParse(response.text || "{}");
+      const slug = data.slug || keyword.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
       
       let images: string[] = [];
       if (googleApiKey && googleCx) {
@@ -588,7 +589,7 @@ function ContentGenerator({ sites, addLog, googleApiKey, googleCx }: { sites: WP
         title: data.title, 
         content: finalHtml, 
         meta: data.meta, 
-        slug: data.slug, 
+        slug: slug, 
         imageUrl: featuredImage 
       });
       setImageUrl(featuredImage);
@@ -848,6 +849,7 @@ function BulkPoster({ sites, addLog, googleApiKey, googleCx }: { sites: WPSite[]
             config: { responseMimeType: "application/json" }
           });
           const data = safeJsonParse(aiResponse.text || "{}");
+          const slug = data.slug || job.keyword.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
           let images: string[] = [];
           if (googleApiKey && googleCx) {
@@ -865,10 +867,12 @@ function BulkPoster({ sites, addLog, googleApiKey, googleCx }: { sites: WPSite[]
                 username: site.username,
                 password: site.applicationPassword,
                 imageUrl: featuredImage,
-                filename: `${data.slug}.jpg`
+                filename: `${slug}.jpg`
               });
               mediaId = mediaResponse.data.id;
-            } catch (e) {
+            } catch (e: any) {
+              const errorMsg = e.response?.data?.message || e.message;
+              addLog(`Lỗi tải ảnh lên (${site.name}): ${errorMsg}`, 'error', site.name);
               console.error("Failed to upload featured image in bulk", e);
             }
           }
@@ -881,7 +885,7 @@ function BulkPoster({ sites, addLog, googleApiKey, googleCx }: { sites: WPSite[]
               title: data.title,
               content: finalHtml,
               status: 'publish',
-              slug: data.slug,
+              slug: slug,
               featured_media: mediaId,
               categories: job.category ? [parseInt(job.category)] : []
             }

@@ -4,9 +4,15 @@ import path from "path";
 import { fileURLToPath } from "url";
 import axios from "axios";
 import { parse } from "csv-parse/sync";
+import https from "https";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Permissive HTTPS agent for sites with SSL issues
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: false
+});
 
 async function startServer() {
   const app = express();
@@ -25,6 +31,7 @@ async function startServer() {
         headers: {
           Authorization: `Basic ${auth}`,
         },
+        httpsAgent
       });
       
       const userData = response.data;
@@ -71,6 +78,7 @@ async function startServer() {
           Authorization: `Basic ${auth}`,
           "Content-Type": "application/json",
         },
+        httpsAgent
       });
       res.json(response.data);
     } catch (error: any) {
@@ -85,22 +93,77 @@ async function startServer() {
     
     try {
       // Download image
-      const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+      console.log(`Downloading image from: ${imageUrl}`);
+      const imageResponse = await axios.get(imageUrl, { 
+        responseType: 'arraybuffer',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        },
+        timeout: 15000,
+        httpsAgent
+      });
+      
       const imageBuffer = Buffer.from(imageResponse.data);
+      if (imageBuffer.length === 0) {
+        throw new Error("Downloaded image is empty");
+      }
 
+      const contentType = imageResponse.headers['content-type'] || 'image/jpeg';
+      
+      // Determine correct extension
+      const mimeToExt: Record<string, string> = {
+        'image/jpeg': 'jpg',
+        'image/jpg': 'jpg',
+        'image/png': 'png',
+        'image/gif': 'gif',
+        'image/webp': 'webp',
+        'image/svg+xml': 'svg'
+      };
+      
+      const ext = mimeToExt[contentType.split(';')[0]] || 'jpg';
+      const baseName = filename ? filename.split('.')[0] : 'image';
+      const finalFilename = `${baseName}.${ext}`;
+
+      console.log(`Uploading to WordPress: ${site}/wp-json/wp/v2/media`);
+      console.log(`Filename: ${finalFilename}, Content-Type: ${contentType}, Size: ${imageBuffer.length} bytes`);
+      
       const auth = Buffer.from(`${username}:${password}`).toString("base64");
       const response = await axios.post(`${site}/wp-json/wp/v2/media`, imageBuffer, {
         headers: {
           Authorization: `Basic ${auth}`,
-          "Content-Disposition": `attachment; filename="${filename || 'image.jpg'}"`,
-          "Content-Type": "image/jpeg",
+          "Content-Disposition": `attachment; filename="${finalFilename}"`,
+          "Content-Type": contentType,
         },
+        httpsAgent,
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity
       });
+      
+      console.log(`Upload successful: ID ${response.data.id}`);
       res.json(response.data);
     } catch (error: any) {
-      const errorData = error.response?.data || error.message;
-      console.error("WP Media Error:", JSON.stringify(errorData, null, 2));
-      res.status(error.response?.status || 500).json(errorData);
+      if (error.response) {
+        const errorData = error.response.data;
+        console.error("WP Media Error (Response):", JSON.stringify(errorData, null, 2));
+        res.status(error.response.status).json({
+          success: false,
+          message: errorData.message || "WordPress media upload failed",
+          details: errorData
+        });
+      } else if (error.request) {
+        console.error("WP Media Error (No Response):", error.message);
+        res.status(500).json({
+          success: false,
+          message: "No response from server during media operation",
+          details: error.message
+        });
+      } else {
+        console.error("WP Media Error (Setup):", error.message);
+        res.status(500).json({
+          success: false,
+          message: error.message
+        });
+      }
     }
   });
 
