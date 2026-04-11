@@ -785,7 +785,12 @@ function ContentGenerator({ sites, addLog, googleApiKey, googleCx, unsplashApiKe
           slug: generatedContent.slug,
           featured_media: mediaId,
           meta: {
-            _yoast_wpseo_metadesc: generatedContent.meta
+            _yoast_wpseo_metadesc: generatedContent.meta,
+            _yoast_wpseo_focuskw: keyword,
+            _yoast_wpseo_title: generatedContent.title,
+            rank_math_focus_keyword: keyword,
+            rank_math_description: generatedContent.meta,
+            rank_math_title: generatedContent.title
           }
         }
       });
@@ -1152,7 +1157,15 @@ function BulkPoster({ sites, addLog, googleApiKey, googleCx, unsplashApiKey }: {
               date: postDate,
               slug: slug,
               featured_media: mediaId,
-              categories: job.category ? [parseInt(job.category)] : []
+              categories: job.category ? [parseInt(job.category)] : [],
+              meta: {
+                _yoast_wpseo_metadesc: data.meta,
+                _yoast_wpseo_focuskw: job.keyword,
+                _yoast_wpseo_title: data.title,
+                rank_math_focus_keyword: job.keyword,
+                rank_math_description: data.meta,
+                rank_math_title: data.title
+              }
             }
           });
 
