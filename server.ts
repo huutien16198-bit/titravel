@@ -85,7 +85,25 @@ async function startServer() {
       res.json(response.data);
     } catch (error: any) {
       console.error("WP Post Error:", error.response?.data || error.message);
-      res.status(error.response?.status || 500).json(error.response?.data || { message: error.message });
+      
+      let errorMessage = error.message;
+      const responseData = error.response?.data;
+      
+      if (typeof responseData === 'string') {
+        const match = responseData.match(/<title>(.*?)<\/title>/i);
+        if (match) {
+          errorMessage = `Server HTML Error: ${match[1]}`;
+        } else {
+          errorMessage = `Server Error: ${responseData.substring(0, 100)}...`;
+        }
+      } else if (responseData?.message) {
+        errorMessage = responseData.message;
+      }
+
+      res.status(error.response?.status || 500).json({ 
+        message: errorMessage,
+        details: responseData || null
+      });
     }
   });
 
