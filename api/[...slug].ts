@@ -16,9 +16,8 @@ app.post("/api/wp/test-connection", async (req, res) => {
   const { site, username, password } = req.body;
   
   try {
-    const cleanSite = site.replace(/\/$/, '');
     const auth = Buffer.from(`${username}:${password}`).toString("base64");
-    const response = await axios.get(`${cleanSite}/wp-json/wp/v2/users/me`, {
+    const response = await axios.get(`${site}/wp-json/wp/v2/users/me`, {
       headers: {
         Authorization: `Basic ${auth}`,
       },
@@ -63,9 +62,8 @@ app.post("/api/wp/post", async (req, res) => {
   const { site, username, password, postData } = req.body;
   
   try {
-    const cleanSite = site.replace(/\/$/, '');
     const auth = Buffer.from(`${username}:${password}`).toString("base64");
-    const response = await axios.post(`${cleanSite}/wp-json/wp/v2/posts`, postData, {
+    const response = await axios.post(`${site}/wp-json/wp/v2/posts`, postData, {
       headers: {
         Authorization: `Basic ${auth}`,
         "Content-Type": "application/json",
@@ -75,25 +73,7 @@ app.post("/api/wp/post", async (req, res) => {
     res.json(response.data);
   } catch (error: any) {
     console.error("WP Post Error:", error.response?.data || error.message);
-    
-    let errorMessage = error.message;
-    const responseData = error.response?.data;
-    
-    if (typeof responseData === 'string') {
-      const match = responseData.match(/<title>(.*?)<\/title>/i);
-      if (match) {
-        errorMessage = `Server HTML Error: ${match[1]}`;
-      } else {
-        errorMessage = `Server Error: ${responseData.substring(0, 100)}...`;
-      }
-    } else if (responseData?.message) {
-      errorMessage = responseData.message;
-    }
-
-    res.status(error.response?.status || 500).json({ 
-      message: errorMessage,
-      details: responseData || null
-    });
+    res.status(error.response?.status || 500).json(error.response?.data || { message: error.message });
   }
 });
 
@@ -134,9 +114,8 @@ app.post("/api/wp/media", async (req, res) => {
 
     console.log(`Uploading to WordPress: ${site}/wp-json/wp/v2/media`);
     
-    const cleanSite = site.replace(/\/$/, '');
     const auth = Buffer.from(`${username}:${password}`).toString("base64");
-    const response = await axios.post(`${cleanSite}/wp-json/wp/v2/media`, imageBuffer, {
+    const response = await axios.post(`${site}/wp-json/wp/v2/media`, imageBuffer, {
       headers: {
         Authorization: `Basic ${auth}`,
         "Content-Disposition": `attachment; filename="${finalFilename}"`,
@@ -169,9 +148,8 @@ app.post("/api/wp/media", async (req, res) => {
 app.post("/api/wp/categories", async (req, res) => {
   const { site, username, password } = req.body;
   try {
-    const cleanSite = site.replace(/\/$/, '');
     const auth = Buffer.from(`${username}:${password}`).toString("base64");
-    const response = await axios.get(`${cleanSite}/wp-json/wp/v2/categories?per_page=100`, {
+    const response = await axios.get(`${site}/wp-json/wp/v2/categories?per_page=100`, {
       headers: { Authorization: `Basic ${auth}` },
       httpsAgent
     });
@@ -185,9 +163,8 @@ app.post("/api/wp/categories", async (req, res) => {
 app.post("/api/wp/tags", async (req, res) => {
   const { site, username, password } = req.body;
   try {
-    const cleanSite = site.replace(/\/$/, '');
     const auth = Buffer.from(`${username}:${password}`).toString("base64");
-    const response = await axios.get(`${cleanSite}/wp-json/wp/v2/tags?per_page=100`, {
+    const response = await axios.get(`${site}/wp-json/wp/v2/tags?per_page=100`, {
       headers: { Authorization: `Basic ${auth}` },
       httpsAgent
     });
