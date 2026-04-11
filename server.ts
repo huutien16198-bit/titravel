@@ -23,11 +23,12 @@ async function startServer() {
   // WordPress Test Connection Endpoint
   app.post("/api/wp/test-connection", async (req, res) => {
     const { site, username, password } = req.body;
+    const cleanSite = site.replace(/\/+$/, '');
     
     try {
       const auth = Buffer.from(`${username}:${password}`).toString("base64");
       // Try to get current user info to verify credentials and permissions
-      const response = await axios.get(`${site}/wp-json/wp/v2/users/me`, {
+      const response = await axios.get(`${cleanSite}/wp-json/wp/v2/users/me`, {
         headers: {
           Authorization: `Basic ${auth}`,
         },
@@ -70,10 +71,11 @@ async function startServer() {
   // WordPress Proxy Endpoint
   app.post("/api/wp/post", async (req, res) => {
     const { site, username, password, postData } = req.body;
+    const cleanSite = site.replace(/\/+$/, '');
     
     try {
       const auth = Buffer.from(`${username}:${password}`).toString("base64");
-      const response = await axios.post(`${site}/wp-json/wp/v2/posts`, postData, {
+      const response = await axios.post(`${cleanSite}/wp-json/wp/v2/posts`, postData, {
         headers: {
           Authorization: `Basic ${auth}`,
           "Content-Type": "application/json",
@@ -90,6 +92,7 @@ async function startServer() {
   // WordPress Media Upload Proxy
   app.post("/api/wp/media", async (req, res) => {
     const { site, username, password, imageUrl, filename } = req.body;
+    const cleanSite = site.replace(/\/+$/, '');
     
     try {
       // Download image
@@ -124,11 +127,11 @@ async function startServer() {
       const baseName = filename ? filename.split('.')[0] : 'image';
       const finalFilename = `${baseName}.${ext}`;
 
-      console.log(`Uploading to WordPress: ${site}/wp-json/wp/v2/media`);
+      console.log(`Uploading to WordPress: ${cleanSite}/wp-json/wp/v2/media`);
       console.log(`Filename: ${finalFilename}, Content-Type: ${contentType}, Size: ${imageBuffer.length} bytes`);
       
       const auth = Buffer.from(`${username}:${password}`).toString("base64");
-      const response = await axios.post(`${site}/wp-json/wp/v2/media`, imageBuffer, {
+      const response = await axios.post(`${cleanSite}/wp-json/wp/v2/media`, imageBuffer, {
         headers: {
           Authorization: `Basic ${auth}`,
           "Content-Disposition": `attachment; filename="${finalFilename}"`,
@@ -144,7 +147,7 @@ async function startServer() {
       // If altText is provided, update the media item
       if (req.body.altText && response.data.id) {
         try {
-          await axios.post(`${site}/wp-json/wp/v2/media/${response.data.id}`, {
+          await axios.post(`${cleanSite}/wp-json/wp/v2/media/${response.data.id}`, {
             alt_text: req.body.altText
           }, {
             headers: {
@@ -190,9 +193,10 @@ async function startServer() {
   // WordPress Categories Proxy
   app.post("/api/wp/categories", async (req, res) => {
     const { site, username, password } = req.body;
+    const cleanSite = site.replace(/\/+$/, '');
     try {
       const auth = Buffer.from(`${username}:${password}`).toString("base64");
-      const response = await axios.get(`${site}/wp-json/wp/v2/categories?per_page=100`, {
+      const response = await axios.get(`${cleanSite}/wp-json/wp/v2/categories?per_page=100`, {
         headers: { Authorization: `Basic ${auth}` },
         httpsAgent
       });
@@ -205,9 +209,10 @@ async function startServer() {
   // WordPress Tags Proxy
   app.post("/api/wp/tags", async (req, res) => {
     const { site, username, password } = req.body;
+    const cleanSite = site.replace(/\/+$/, '');
     try {
       const auth = Buffer.from(`${username}:${password}`).toString("base64");
-      const response = await axios.get(`${site}/wp-json/wp/v2/tags?per_page=100`, {
+      const response = await axios.get(`${cleanSite}/wp-json/wp/v2/tags?per_page=100`, {
         headers: { Authorization: `Basic ${auth}` },
         httpsAgent
       });
